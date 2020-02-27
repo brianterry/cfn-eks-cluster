@@ -1,0 +1,105 @@
+{
+    "typeName": "Jaymccon::EKS::Cluster",
+    "description": "A resource that creates EKS clusters.",
+    "sourceUrl": "https://github.com/aws-cloudformation/aws-cloudformation-rpdk.git",
+    "properties": {
+        "Name": {
+            "description": "The unique name to give to your cluster.",
+            "type": "string"
+        },
+        "RoleArn": {
+            "description": "The Amazon Resource Name (ARN) of the IAM role that provides permissions for Amazon EKS to make calls to other AWS API operations on your behalf.",
+            "type": "string"
+        },
+        "Version": {
+            "description": "The desired Kubernetes version for your cluster. If you don't specify a value here, the latest version available in Amazon EKS is used.",
+            "type": "string"
+        },
+        "ResourcesVpcConfig": {
+            "description": "An object representing the VPC configuration to use for an Amazon EKS cluster.\n\n",
+            "type": "object",
+            "properties": {
+                "SecurityGroupIds": {
+                    "description": "Specify one or more security groups for the cross-account elastic network interfaces that Amazon EKS creates to use to allow communication between your worker nodes and the Kubernetes control plane. If you don't specify a security group, the default security group for your VPC is used.",
+                    "type": "array",
+                    "items": {"type": "string"}
+                },
+                "SubnetIds": {
+                    "description": "Specify subnets for your Amazon EKS worker nodes. Amazon EKS creates cross-account elastic network interfaces in these subnets to allow communication between your worker nodes and the Kubernetes control plane.",
+                    "type": "array",
+                    "items": {"type": "string"}
+                }
+            },
+            "required": ["SubnetIds"],
+            "additionalProperties": false
+        },
+        "Arn": {
+            "description": "The ARN of the cluster, such as arn:aws:eks:us-west-2:666666666666:cluster/prod.",
+            "type": "string"
+        },
+        "CertificateAuthorityData": {
+            "description": "The certificate-authority-data for your cluster.",
+            "type": "string"
+        },
+        "ClusterSecurityGroupId": {
+            "description": "The cluster security group that was created by Amazon EKS for the cluster. Managed node groups use this security group for control plane to data plane communication.",
+            "type": "string"
+        },
+        "Endpoint": {
+            "description": "The endpoint for your Kubernetes API server, such as https://5E1D0CEXAMPLEA591B746AFC5AB30262.yl4.us-west-2.eks.amazonaws.com.",
+            "type": "string"
+        }
+    },
+    "additionalProperties": false,
+    "required": [
+        "RoleArn",
+        "ResourcesVpcConfig"
+    ],
+    "readOnlyProperties": [
+        "/properties/Arn",
+        "/properties/Endpoint",
+        "/properties/ClusterSecurityGroupId",
+        "/properties/CertificateAuthorityData"
+    ],
+    "createOnlyProperties": [
+        "/properties/Name",
+        "/properties/RoleArn"
+    ],
+    "primaryIdentifier": [
+        "/properties/Name"
+    ],
+    "handlers": {
+        "create": {
+            "permissions": [
+                "eks:CreateCluster",
+                "eks:DescribeCluster",
+                "iam:PassRole"
+            ]
+        },
+        "read": {
+            "permissions": [
+                "eks:DescribeCluster"
+            ]
+        },
+        "update": {
+            "permissions": [
+                "eks:DescribeCluster",
+                "eks:UpdateClusterVersion",
+                "eks:UpdateClusterConfig",
+                "iam:PassRole"
+            ]
+        },
+        "delete": {
+            "permissions": [
+                "eks:DescribeCluster",
+                "eks:DeleteCluster"
+            ]
+        },
+        "list": {
+            "permissions": [
+                "eks:DescribeCluster",
+                "eks:ListClusters"
+            ]
+        }
+    }
+}
