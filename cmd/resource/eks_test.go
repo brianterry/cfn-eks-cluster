@@ -12,11 +12,12 @@ import (
 	"time"
 )
 
-var anErr error = errors.New("upstream error")
+var anErr = errors.New("upstream error")
 
 type mockEKSClient struct {
 	eksiface.EKSAPI
 	MockCluster       *eks.Cluster
+	MockClusterList   []*string
 	MockCreateError   error
 	MockDescribeError error
 	MockUpdateError   error
@@ -64,7 +65,7 @@ func (m *mockEKSClient) CreateCluster(input *eks.CreateClusterInput) (*eks.Creat
 	}, m.MockCreateError
 }
 
-func (m *mockEKSClient) UpdateClusterConfig(input *eks.UpdateClusterConfigInput) (*eks.UpdateClusterConfigOutput, error) {
+func (m *mockEKSClient) UpdateClusterConfig(_ *eks.UpdateClusterConfigInput) (*eks.UpdateClusterConfigOutput, error) {
 	return &eks.UpdateClusterConfigOutput{
 		Update: &eks.Update{
 			CreatedAt: &time.Time{},
@@ -155,6 +156,12 @@ func (m *mockEKSClient) DescribeCluster(input *eks.DescribeClusterInput) (*eks.D
 			Version: m.MockCluster.Version,
 		},
 	}, m.MockDescribeError
+}
+
+func (m *mockEKSClient) ListClusters(_ *eks.ListClustersInput) (*eks.ListClustersOutput, error) {
+	return &eks.ListClustersOutput{
+		Clusters: m.MockClusterList,
+	}, m.MockListError
 }
 
 func makeCluster() *eks.Cluster {
@@ -327,6 +334,35 @@ func TestDescribeCluster(t *testing.T) {
 	t.Run("aws api err", func(t *testing.T) {
 		mockSvc.MockDescribeError = awserr.New(eks.ErrCodeResourceNotFoundException, "mock aws error", anErr)
 		progress := describeCluster(mockSvc, model)
+		assert.Equal(t, handler.Failed, progress.OperationStatus)
+	})
+}
+
+func TestListCluster(t *testing.T) {
+	mockSvc := &mockEKSClient{
+		MockCluster: makeCluster(),
+	}
+	t.Run("empty response", func(t *testing.T) {
+		mockSvc.MockClusterList = []*string{}
+		progress := listClusters(mockSvc)
+		assert.Equal(t, handler.Success, progress.OperationStatus)
+		assert.Equal(t, 1, len(progress.ResourceModels))
+	})
+	t.Run("success", func(t *testing.T) {
+		mockSvc.MockClusterList = []*string{aws.String("cluster1"), aws.String("cluster2")}
+		progress := listClusters(mockSvc)
+		assert.Equal(t, handler.Success, progress.OperationStatus)
+		assert.Equal(t, 3, len(progress.ResourceModels))
+	})
+	t.Run("describe error", func(t *testing.T) {
+		mockSvc.MockDescribeError = awserr.New(eks.ErrCodeClientException, "mock aws error", anErr)
+		progress := listClusters(mockSvc)
+		assert.Equal(t, handler.Failed, progress.OperationStatus)
+	})
+	t.Run("list error", func(t *testing.T) {
+		mockSvc.MockDescribeError = nil
+		mockSvc.MockListError = awserr.New(eks.ErrCodeClientException, "mock aws error", anErr)
+		progress := listClusters(mockSvc)
 		assert.Equal(t, handler.Failed, progress.OperationStatus)
 	})
 }
